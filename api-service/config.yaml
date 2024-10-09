@@ -1,0 +1,18 @@
+logging:
+  level: "info"
+  file: "logs/app.log"
+  max_size: 10
+  max_backups: 5
+  max_age: 30
+  compress: true
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "1988"
+  dbname: "knitty"
+  sslmode: "disable"
+
+server:
+  port: "8080"
