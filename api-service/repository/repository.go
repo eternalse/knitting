@@ -3,11 +3,10 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"knitti/api-service/models"
-
-	"github.com/sirupsen/logrus"
+	"knittibot/api-service/models"
 
 	_ "github.com/lib/pq" // импортируем драйвер PostgreSQL
+	"github.com/sirupsen/logrus"
 )
 
 // Пример инициализации базы данных

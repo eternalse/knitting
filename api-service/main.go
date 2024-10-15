@@ -3,14 +3,14 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"knitti/api-service/config"
-	"knitti/api-service/handlers"
+	"knittibot/api-service/config"
+	"knittibot/api-service/handlers"
 	"net/http"
-
-	"github.com/sirupsen/logrus"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 )
 
 var db *sql.DB
@@ -34,7 +34,7 @@ func main() {
 		logrus.Fatal("Database configuration is incomplete.")
 	}
 
-	// Подключение к базе данных
+	// Подключение к базе данных с ожиданием
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host,
@@ -44,16 +44,25 @@ func main() {
 		cfg.Database.DBName,
 		cfg.Database.SSLMode,
 	)
-	db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		logrus.Fatalf("Error connecting to database: %v", err)
+
+	for {
+		db, err = sql.Open("postgres", connStr)
+		if err != nil {
+			logrus.Warnf("Error connecting to database: %v. Retrying in 2 seconds...", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		// Проверка подключения
+		if err := db.Ping(); err != nil {
+			logrus.Warnf("Error pinging database: %v. Retrying in 2 seconds...", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		break // Успешное подключение
 	}
 	defer db.Close()
 
-	// Проверка подключения
-	if err := db.Ping(); err != nil {
-		logrus.Fatalf("Error pinging database: %v", err)
-	}
 	logrus.Info("Successfully connected to the database")
 
 	// Инициализация обработчиков

@@ -10,12 +10,13 @@ logging:
   compress: true
 
 database:
-  host: "localhost"
+  host: "db"  # Имя сервиса из docker-compose.yml
   port: "5432"
   user: "postgres"
   password: "1988"
   dbname: "knitty"
   sslmode: "disable"
+
 
 server:
   port: "8080"

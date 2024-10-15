@@ -3,7 +3,8 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"knitti/api-service/models"
+	"knittibot/api-service/models"
+
 	"github.com/sirupsen/logrus"
 )
 

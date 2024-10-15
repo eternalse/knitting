@@ -1,0 +1,225 @@
+-- Создание последовательностей, если они не существуют
+CREATE SEQUENCE IF NOT EXISTS public.users_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.ideas_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.comments_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.likes_id_seq;
+
+
+
+ Создание таблиц 
+
+-- Table: public.users
+
+-- DROP TABLE IF EXISTS public.users;
+
+CREATE TABLE IF NOT EXISTS public.users
+(
+    id integer NOT NULL DEFAULT nextval('users_id_seq'::regclass),
+    username character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+)
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.users
+    OWNER to postgres;
+
+-- Table: public.ideas
+
+-- DROP TABLE IF EXISTS public.ideas;
+
+CREATE TABLE IF NOT EXISTS public.ideas
+(
+    id integer NOT NULL DEFAULT nextval('ideas_id_seq'::regclass),
+    title character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    type_of_item character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    number_of_balls integer,
+    number_of_colors integer,
+    tool_type character varying(100) COLLATE pg_catalog."default",
+    yarn_type character varying(100) COLLATE pg_catalog."default",
+    scheme_url text COLLATE pg_catalog."default",
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ideas_pkey PRIMARY KEY (id)
+)
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.ideas
+    OWNER to postgres;
+
+-- Trigger: update_ideas_updated_at
+
+-- DROP TRIGGER IF EXISTS update_ideas_updated_at ON public.ideas;
+
+CREATE OR REPLACE TRIGGER update_ideas_updated_at
+    BEFORE UPDATE 
+    ON public.ideas
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Table: public.comments
+
+-- DROP TABLE IF EXISTS public.comments;
+
+CREATE TABLE IF NOT EXISTS public.comments
+(
+    id integer NOT NULL DEFAULT nextval('comments_id_seq'::regclass),
+    idea_id integer NOT NULL,
+    user_id integer NOT NULL,
+    comment text COLLATE pg_catalog."default" NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    CONSTRAINT comments_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_idea FOREIGN KEY (idea_id)
+        REFERENCES public.ideas (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.comments
+    OWNER to postgres;
+
+-- Table: public.likes
+
+-- DROP TABLE IF EXISTS public.likes;
+
+CREATE TABLE IF NOT EXISTS public.likes
+(
+    id integer NOT NULL DEFAULT nextval('likes_id_seq'::regclass),
+    user_id integer NOT NULL,
+    idea_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT likes_pkey PRIMARY KEY (id),
+    CONSTRAINT likes_user_id_idea_id_key UNIQUE (user_id, idea_id),
+    CONSTRAINT likes_idea_id_fkey FOREIGN KEY (idea_id)
+        REFERENCES public.ideas (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.likes
+    OWNER to postgres;
+
+
+-- Создание функции
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Создание триггера
+CREATE TRIGGER update_ideas_updated_at
+BEFORE UPDATE ON public.ideas
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+
+
+
+dockerfile
+
+# Используйте многослойную сборку для сборки Go приложений
+FROM golang:1.18 AS builder
+
+WORKDIR /app
+
+# Копируем файлы go.mod и go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Копируем исходный код
+COPY . .
+
+# Компилируем приложения
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./api-service/api-service ./api-service/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bot-service/bot-service ./bot-service/main.go
+
+# Создайте второй образ для запуска
+FROM alpine:latest
+
+WORKDIR /app
+
+# Копируем исполняемые файлы и конфиги
+COPY --from=builder /app/api-service/api-service /app/api-service
+COPY --from=builder /app/bot-service/bot-service /app/bot-service
+COPY --from=builder /app/api-service/config.yaml /app/
+COPY --from=builder /app/bot-service/config.yaml /app/
+
+# Устанавливаем необходимые утилиты
+RUN apk add --no-cache bash
+
+# Указываем команду запуска для api-service по умолчанию
+CMD ["/app/api-service"]  # Это можно заменить в docker-compose
+
+
+
+dockercompose
+
+services:
+  db:
+    image: postgres:latest
+    restart: always  # Убедитесь, что база данных всегда перезапускается
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1988
+      POSTGRES_DB: knitty
+    ports:
+      - "5434:5432"  # Порт для доступа к базе данных с хоста
+    volumes:
+      - db_data:/var/lib/postgresql/data  # Персистентный том для базы данных
+
+  api-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/app/api-service"]
+    image: knitti-api-service:latest
+    environment:
+      - DATABASE_HOST=db  # Используй имя контейнера базы данных
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=1988
+      - DATABASE_NAME=knitty
+      - SERVER_PORT=8080  # Убедитесь, что ваш API слушает на этом порту
+      - LOGGING_LEVEL=info
+      - LOGGING_FILE=logs/app.log
+      - LOGGING_MAX_SIZE=10
+      - LOGGING_MAX_BACKUPS=5
+      - LOGGING_MAX_AGE=30
+      - LOGGING_COMPRESS=true
+      - TELEGRAM_TOKEN=7434671523:AAEq_bG153U1P-5iAlRxd1uJwu9ESv4O8P4
+    ports:  # Добавленная секция
+      - "8080:8080"  # Перенаправление порта 8080
+    depends_on:  # Убедитесь, что api-service не запускается, пока база данных не будет готова
+      - db
+
+  bot-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/app/bot-service"]
+    image: knitti-bot-service:latest
+    environment:
+      - TELEGRAM_TOKEN=7434671523:AAEq_bG153U1P-5iAlRxd1uJwu9ESv4O8P4
+      - LOGGING_LEVEL=info
+      - LOGGING_FILE=logs/app.log
+      - LOGGING_MAX_SIZE=10
+      - LOGGING_MAX_BACKUPS=5
+      - LOGGING_MAX_AGE=30
+      - LOGGING_COMPRESS=true
+    depends_on:  # Убедитесь, что bot-service тоже ждет базу данных
+      - db
+
+volumes:
+  db_data:  # Определите том здесь

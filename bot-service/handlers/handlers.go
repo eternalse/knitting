@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"knitti/api-service/repository"
-	"knitti/bot-service/models"
+	"knittibot/api-service/repository"
+	"knittibot/bot-service/models"
 	"log"
 	"math/rand"
 	"net/http"
@@ -69,8 +69,8 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB) {
 		HandleComplaintRequest(bot, msg)
 	case "Помощь":
 		HandleHelpRequest(bot, msg)
-	case "Поддержать разработчика":
-		HandleSupportRequest(bot, msg)
+		/*case "Поддержать разработчика":
+		HandleSupportRequest(bot, msg) */
 	default:
 		if strings.HasPrefix(msg.Text, "Жалоба:") {
 			forwardComplaintToGroup(bot, msg) // Пересылаем жалобу в групповой чат
@@ -171,7 +171,7 @@ func HandleMenu(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("Заново"),
 			tgbotapi.NewKeyboardButton("Помощь"),
-			tgbotapi.NewKeyboardButton("Поддержать разработчика"),
+		//	tgbotapi.NewKeyboardButton("Поддержать разработчика"),
 		),
 	)
 	msgConfig := tgbotapi.NewMessage(msg.Chat.ID, menuText)
@@ -186,13 +186,13 @@ func HandleMenu(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 func HandleNewIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	instructions := "Если вам не понравилась предложенная идея, то нажмите на кнопку `Заново` в меню, и бот подберет вам что-нибудь другое \n\n" +
 		"  - Используйте только те варианты данных, которые предлагаются в сообщении-подсказке, иначе могут возникнуть сложности с поиском.\n\n" +
-		"  - Если вы хотите расширить поиск, выберите некоторые значения параметров произвольными. Для этого используйте значения *`любой`* или *`0`* для кол-ва мотков и цветов пряжи.\n\n" +
-		"  - Воспользуйтесь шаблоном в следующем сообщении, так будет проще ввести нужные параметры\n\n" +
+		"  - Если вы хотите расширить поиск, выберите некоторые значения параметров произвольными. Для этого используйте значения `любой` или `0`.\n\n" +
+		"  - Воспользуйтесь шаблоном в следующем сообщении, так будет проще ввести нужные параметры.\n\n" +
 		"  - Чтобы я подобрал тебе идею для вязания, укажите данные:\n" +
 		"1. Тип изделия: женское, мужское, детское, питомцам, аксессуар, интерьер, игрушка или любой.\n" +
 		"2. Количество мотков: от 1 до 20 (если количество не важно, то укажи цифру 0)\n" +
 		"3. Количество цветов: от 1 до 20 (если количество не важно, то укажи цифру 0) \n" +
-		"4. Инструмент, который будете тспользовать: Крючок, Спицы, Пальцы\n" +
+		"4. Инструмент, который будете использовать: крючок, спицы, пальцы\n" +
 		"5. Тип пряжи: плюшевая, обычная, пуффи, мохер или любой \n\n"
 
 	if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, instructions)); err != nil {
@@ -297,7 +297,7 @@ func HandleProcessIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *s
 	}
 
 	if len(result) == 0 {
-		if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "К сожалению, я не нашел идей на основе. Пожалуйста, попробуйте поменять некоторые параметры или проверьте правильность сообщения")); err != nil {
+		if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "К сожалению, я не нашел идей по вашему запросу. Пожалуйста, попробуйте поменять некоторые параметры или проверьте правильность сообщения")); err != nil {
 			logger.WithError(err).Error("Error sending no ideas found message")
 		}
 		return
@@ -470,29 +470,34 @@ func HandleProcessAddIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 
 	// Извлекаем значения из строк
 	title := extractValue(lines[0])
-
+	logger.Infof("Title extracted: %s", title) // Логируем извлеченное значение
 	// Проверяем название на нецензурную лексику
 	if isProfane(title) {
-		if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Пожалуйста, не используйте нецензурную лексику!.")); err != nil {
+		if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Пожалуйста, не используйте нецензурную лексику!")); err != nil {
 			logger.WithError(err).Error("Error sending profane title message")
 		}
 		return
 	}
 
 	typeOfItem := extractValue(lines[1])
+	logger.Infof("Type of item extracted: %s", typeOfItem)
+
 	numberOfBallsStr := extractValue(lines[2])
 	numberOfBalls, err := strconv.Atoi(numberOfBallsStr)
 	if err != nil || numberOfBalls < 1 || numberOfBalls > 20 {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Количество мотков должно быть числом от 1 до 20."))
+		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Количество мотков должно быть числом от 1 до 20"))
 		return
 	}
+	logger.Infof("Number of balls: %d", numberOfBalls)
 
 	numberOfColorsStr := extractValue(lines[3])
 	numberOfColors, err := strconv.Atoi(numberOfColorsStr)
 	if err != nil || numberOfColors < 1 || numberOfColors > 20 {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Количество цветов должно быть числом от 1 до 20."))
+		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Количество цветов должно быть числом от 1 до 20"))
 		return
 	}
+
+	logger.Infof("Number of colors: %d", numberOfColors)
 
 	toolType := extractValue(lines[4])
 	yarnType := extractValue(lines[5])
@@ -526,6 +531,7 @@ func HandleProcessAddIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	}
 
 	if err := addIdeaToAPI(idea); err != nil {
+		logger.WithError(err).Error("Failed to add idea to API")
 		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Ой, произошла ошибка. Пожалуйста, проверьте, в правильном ли формате ваше сообщение. Если ошибка повторяется - отправьте жалобу"))
 		return
 	}
@@ -557,7 +563,7 @@ func isValidURL(urlStr string) bool {
 }
 
 func addIdeaToAPI(idea models.AddIdeaRequest) error {
-	apiURL := "http://localhost:8080/ideas"
+	apiURL := "http://api-service:8080/ideas"
 
 	// Кодируем структуру в JSON
 	ideaJSON, err := json.Marshal(idea)
@@ -647,12 +653,12 @@ func HandleDeleteIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sq
 }
 
 func HandleHelpRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	msgText := "Привет! Если у вас появились сложности при работе с ботом - ознакомьтесь с этим разделом, возможно он сможет вам помочь! \n\n" +
+	msgText := "Если у вас появились сложности при работе с ботом - ознакомьтесь с этим разделом, возможно он сможет вам помочь! \n\n" +
 		"- Если вы не хотите указывать точное количество мотков или цветов пряжи, то используйте цифру 0.\n\n" +
 		"- Для поиска идей с пряжей `пуффи` укажите как инструмент пальцы или крючок.\n\n" +
-		"- Если бот не распознает ваше сообщение - пожалуйста, проверьте, нет ли в нем грамматических ошибок.\n\n" +
+		"- Если бот не распознает ваше сообщение - пожалуйста, проверьте, нет ли в нем грамматических ошибок и все параметры введены после двоеточия\n\n" +
 		"- Если содержимое какого-то сообщения показалось вам неприемлимым, то перешлите его боту с подписью `Жалоба: текст ваше жалобы` и бот обязательно передаст это мне.\n\n" +
-		"- Если вы заметили какую-то ошибку в работе бота или вам просто что-то не нравится, то напиши в чат  `Жалоба: текст вашей жалобы` и бот обязательно передаст это мне.\n\n" +
+		"- Если вы заметили какую-то ошибку в работе бота или вам просто что-то не нравится, то напишите в чат  `Жалоба: текст вашей жалобы` и бот обязательно передаст это мне.\n\n" +
 		"❗❗❗   Осторожно, фишинговые ссылки!    ❗❗❗\n\n" +
 		" К сожалению проверить все ссылки, которые добавляют другие пользователи - невозможно, по этому для того, чтобы обезопасить себя - используйте эти советы:\n\n" +
 		"1) Всегда обращайте внимание на предпросмотр ссылки. Под ссылкой должно быть краткое описание сайта, на который она ведет, а также как правило будет присутствовать изображение. Если подобное отсутствует, или описание не имеет ничего общего с вязанием - по ссылке лучше не переходить .\n\n" +
@@ -662,16 +668,17 @@ func HandleHelpRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		"- Обычная ссылка  https://www.example.com/category/item?id=12345&ref=67890 \n\n" +
 		"4) Не переходите по ссылке состоящей в основном из цифр, например http://192.168.1.1/login \n\n" +
 		"5) Обратите внимание на символы в ссылке. Если вы видите там символы # или % , то лучше по ссылке не переходить\n\n" +
-		"Если вы заметили что-то из вышеуказанного в идее предложенной ботом, то пожалуйста - отпраьте жалобу, и я оперативно удалю это."
+		"Если вы заметили что-то из вышеуказанного в идее предложенной ботом, то пожалуйста - отпраьте жалобу, и я оперативно удалю это.\n\n" +
+		"Если вдруг вы не нашли здесь ответ на свой вопрос, у вас есть предложения по улучшению бота или вы просто хотите пообщаться, то вы можете написать в чат. Ссылка на него есть в разделе информации."
 
 	if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, msgText)); err != nil {
 		logrus.WithError(err).Warn("Error sending help message")
 	}
 }
 
-func HandleSupportRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	msgText := "❤️ Спасибо за желание поддержать разработчика! Если ты хочешь сделать донат, напиши в личные сообщения."
-	if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, msgText)); err != nil {
-		logrus.WithError(err).Warn("Error sending support message")
-	}
-}
+//func HandleSupportRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
+//	msgText := "❤️ Спасибо за желание поддержать разработчика! Если ты хочешь сделать донат, напиши в личные сообщения."
+//	if _, err := bot.Send(tgbotapi.NewMessage(msg.Chat.ID, msgText)); err != nil {
+//		logrus.WithError(err).Warn("Error sending support message")
+//	}
+// }

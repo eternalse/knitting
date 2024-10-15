@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"knitti/bot-service/config"
-	"knitti/bot-service/handlers"
+	"knittibot/bot-service/config"
+	"knittibot/bot-service/handlers"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	_ "github.com/lib/pq" // Импортируйте драйвер для PostgreSQL

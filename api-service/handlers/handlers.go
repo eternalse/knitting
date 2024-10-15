@@ -3,9 +3,9 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"knitti/api-service/db"
-	"knitti/api-service/models"
-	"knitti/api-service/repository"
+	"knittibot/api-service/db"
+	"knittibot/api-service/models"
+	"knittibot/api-service/repository"
 	"net/http"
 	"strconv"
 
