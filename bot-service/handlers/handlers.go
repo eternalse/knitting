@@ -24,7 +24,7 @@ import (
 var logger = logrus.New()
 
 // Объявляем ID группового чата (можно также использовать переменные окружения)
-var groupChatID int64 = -1002433999722
+var groupChatID int64 = -1002433
 
 // HandleStart обрабатывает команду /start
 func HandleStart(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
@@ -308,8 +308,9 @@ func HandleProcessIdeaRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *s
 	randomIndex := rand.Intn(len(result))
 	randomIdea := result[randomIndex]
 
-	resultMessage := fmt.Sprintf("Вот что я нашел для тебя:\n\nID: %d\nТип изделия: %s\nКоличество мотков: %d\nКоличество цветов: %d\nИнструмент: %s\nТип пряжи: %s",
-		randomIdea.ID, randomIdea.TypeOfItem, randomIdea.NumberOfBalls, randomIdea.NumberOfColors, randomIdea.ToolType, randomIdea.YarnType)
+	// Обновленный результат с добавлением названия идеи
+	resultMessage := fmt.Sprintf("Вот что я нашел для тебя:\n\nID: %d\nНазвание изделия: %s\nТип изделия: %s\nКоличество мотков: %d\nКоличество цветов: %d\nИнструмент: %s\nТип пряжи: %s",
+		randomIdea.ID, randomIdea.Title, randomIdea.TypeOfItem, randomIdea.NumberOfBalls, randomIdea.NumberOfColors, randomIdea.ToolType, randomIdea.YarnType)
 
 	if randomIdea.SchemeURL != "" {
 		resultMessage += fmt.Sprintf("\nСсылка на схему: %s", randomIdea.SchemeURL)
@@ -411,9 +412,9 @@ func HandleRedoRequest(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB) 
 	// Сохраняем ID предложенной идеи
 	proposedIdeas = append(proposedIdeas, randomIdea.ID)
 
-	// Формируем сообщение с новой идеей
-	message := fmt.Sprintf("Вот новая идея для вязания: \nID: %d\nТип изделия: %s\nКоличество мотков: %d\nКоличество цветов: %d\nИнструмент: %s\nТип пряжи: %s",
-		randomIdea.ID, randomIdea.TypeOfItem, randomIdea.NumberOfBalls, randomIdea.NumberOfColors, randomIdea.ToolType, randomIdea.YarnType)
+	// Формируем сообщение с новой идеей (с добавлением названия)
+	message := fmt.Sprintf("Вот новая идея для вязания:\n\nID: %d\nНазвание изделия: %s\nТип изделия: %s\nКоличество мотков: %d\nКоличество цветов: %d\nИнструмент: %s\nТип пряжи: %s",
+		randomIdea.ID, randomIdea.Title, randomIdea.TypeOfItem, randomIdea.NumberOfBalls, randomIdea.NumberOfColors, randomIdea.ToolType, randomIdea.YarnType)
 
 	if randomIdea.SchemeURL != "" {
 		message += fmt.Sprintf("\nСсылка на схему: %s", randomIdea.SchemeURL)
@@ -435,8 +436,7 @@ func contains(slice []int, item int) bool {
 // isProfane проверяет наличие нецензурных слов в названии
 func isProfane(title string) bool {
 	// Пример списка нецензурных слов
-	profaneWords := []string{"хуй", "пизда", "блядь", "пенис", "хуета", "мразь", "сука", "блядота", "вагина", "оргазм", "пидор", "шлюха", "шкура" +
-		"гавно", "дерьмо", "нигер", "пиздец"}
+	profaneWords := []string{"хуй", "в последствии дополнить список"}
 
 	// Приводим название к нижнему регистру для корректной проверки
 	titleLower := strings.ToLower(title)
