@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Инициализация глобальной переменной базы данных
+// Инициализация глобальной переменной базы данных.
 func SetDB(database *sql.DB) {
 	db.DB = database
 }
