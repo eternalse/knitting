@@ -1,0 +1,59 @@
+# Go binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+
+# Добавляем config.yaml
+config.yaml
+
+
+# Build output
+/bin/
+/out/
+/build/
+/dist/
+
+# Go vendor directory (if you're using Go modules)
+/vendor/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*~
+.project
+.classpath
+.cproject
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.out
+
+# Coverage reports
+*.coverprofile
+coverage.out
+
+# Temporary files
+/tmp/
+*.tmp
+
+# Go modules
+go.sum
+go.mod
+
+# Environment variables or config files
+.env
+
+# Dockerfile
+
+docker-compose.yml 
+
+
+note.txt 
